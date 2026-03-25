@@ -1,6 +1,9 @@
 <script lang="ts">
   import '../app.css';
   import { getLocale, setLocale, detectLocale, t } from '$lib/i18n';
+  import { initPostHog, capturePageview } from '$lib/services/posthog';
+  import { afterNavigate } from '$app/navigation';
+  import { page } from '$app/stores';
   import type { Snippet } from 'svelte';
 
   let { children }: { children: Snippet } = $props();
@@ -8,6 +11,9 @@
   $effect(() => {
     setLocale(detectLocale());
   });
+
+  initPostHog();
+  afterNavigate(() => capturePageview($page.url.href));
 
   function toggleLocale() {
     setLocale(getLocale() === 'en' ? 'pt' : 'en');

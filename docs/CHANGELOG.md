@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- **PostHog analytics**: Integrated `posthog-js` for visitor tracking with manual pageview capture on SvelteKit client-side navigation via `afterNavigate`. Analytics are opt-in — disabled when `VITE_POSTHOG_KEY` is not set.
 - **Terminal autocomplete**: Ghost text suggestions appear as you type commands on the homepage terminal; press `Tab` to complete. A visual `tab` badge indicates when a suggestion is available.
 - **Background effects upgrade**: Replaced per-pixel simplex noise with a multi-layered canvas scene featuring 6 flowing aurora orbs (radial gradients with `screen` blending), 60 floating particles with flicker, and a vignette overlay. Debounced resize handling.
 - **`/rocambole` command**: New terminal command that prints an ASCII cat art.

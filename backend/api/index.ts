@@ -1,13 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import serverlessExpress from '@codegenie/serverless-express';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import { AppModule } from '../src/app.module';
-import type { Callback, Context, Handler } from 'aws-lambda';
 
-let cachedServer: Handler;
+const server = express();
+let isBootstrapped = false;
 
-async function bootstrap(): Promise<Handler> {
-  const app = await NestFactory.create(AppModule);
+async function bootstrap() {
+  if (isBootstrapped) return;
+
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
 
   app.enableCors({
     origin: process.env.FRONTEND_URL || '*',
@@ -18,16 +22,10 @@ async function bootstrap(): Promise<Handler> {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   await app.init();
-
-  const expressApp = app.getHttpAdapter().getInstance();
-  return serverlessExpress({ app: expressApp });
+  isBootstrapped = true;
 }
 
-export const handler: Handler = async (
-  event: unknown,
-  context: Context,
-  callback: Callback,
-) => {
-  cachedServer = cachedServer ?? (await bootstrap());
-  return cachedServer(event, context, callback);
-};
+export default async function handler(req: Request, res: Response) {
+  await bootstrap();
+  server(req, res);
+}

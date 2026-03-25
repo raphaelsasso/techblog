@@ -1,0 +1,79 @@
+{
+  "nav": {
+    "home": "Início",
+    "language": "EN"
+  },
+  "home": {
+    "greeting": "Olá, eu sou",
+    "name": "Raphael Sasso",
+    "intro": "Este é o blog do Raphael Sasso onde eu posto sobre System Design e Arquitetura",
+    "techExamples": "Exemplos Técnicos ao Vivo",
+    "techExamplesDescription": "Conceitos práticos de system design que você pode interagir diretamente no seu navegador.",
+    "urlShortener": "Encurtador de URL",
+    "urlShortenerDescription": "Explore como encurtadores de URL funcionam por baixo dos panos: codificação base62, hashing, estratégias de cache e semântica de redirecionamento."
+  },
+  "urlShortener": {
+    "title": "Encurtador de URL",
+    "subtitle": "Um mergulho profundo em system design com uma demo funcional",
+    "inputPlaceholder": "google.com/caminho-longo...",
+    "shorten": "Encurtar",
+    "shortenedUrls": "URLs Encurtadas",
+    "noUrls": "Nenhuma URL encurtada ainda. Tente uma acima!",
+    "copy": "Copiar",
+    "copied": "Copiado!",
+    "visit": "Visitar",
+    "clicks": "cliques",
+    "clear": "Limpar Tudo",
+    "originalUrl": "URL Original",
+    "shortCode": "Código Curto",
+    "created": "Criado",
+    "actions": "Ações"
+  },
+  "redirect": {
+    "title": "Redirecionando...",
+    "lookingUp": "Buscando código curto",
+    "checkingCache": "Verificando cache...",
+    "cacheHit": "Cache HIT! (Acerto)",
+    "cacheMiss": "Cache MISS (Erro) - verificando armazenamento...",
+    "found": "URL encontrada! Redirecionando para:",
+    "notFound": "Código curto não encontrado",
+    "notFoundDescription": "Este código curto não existe no armazenamento do seu navegador. URLs são armazenadas localmente e não estarão disponíveis em outros navegadores.",
+    "backHome": "Voltar ao Início",
+    "redirecting": "Redirecionando em"
+  },
+  "cache": {
+    "title": "Simulador de Cache",
+    "hits": "Acertos",
+    "misses": "Erros",
+    "hitRatio": "Taxa de Acerto",
+    "entries": "Entradas em Cache",
+    "empty": "Cache está vazio",
+    "maxSize": "Tamanho Máximo"
+  },
+  "explanations": {
+    "base62": {
+      "title": "Como Geramos Códigos Curtos: ID Incremental + base62 + Hashids",
+      "content": "Nossa abordagem usa três camadas trabalhando juntas:\n\n**1. ID Incremental** — Cada URL recebe um ID numérico único e sequencial (1, 2, 3, ...). Esta é a forma mais simples de garantir unicidade — duas URLs nunca compartilham um ID, então colisões são impossíveis por design. Em produção, o banco de dados faz auto-incremento. Nesta demo, um contador no localStorage do seu navegador faz esse papel.\n\n**2. Codificação base62** — O ID é codificado usando caracteres `a-z`, `A-Z`, `0-9` — 62 caracteres possíveis por posição. Com no máximo **7 caracteres**, temos:\n\n`62^7 = 3.521.614.606.208` (~3,5 trilhões de códigos únicos)\n\nIsso é mais que suficiente para praticamente qualquer serviço de encurtamento. base62 é seguro para URLs (sem caracteres especiais que precisem de escape) e case-sensitive, maximizando a densidade de informação.\n\n**3. Ofuscação Hashids (Sqids)** — Um ID sequencial codificado diretamente em base62 seria previsível: `1 → aaaaab`, `2 → aaaaac`, etc. Um atacante poderia enumerar todas as suas URLs incrementando. **Sqids** (a biblioteca moderna de hashids) embaralha a codificação para que entradas sequenciais produzam saídas não-sequenciais e não-adivinháveis. O mapeamento é determinístico e reversível, mas o padrão não é óbvio sem conhecer o embaralhamento do alfabeto.\n\nA combinação nos dá:\n- **Zero colisões** — IDs incrementais são únicos por definição\n- **Códigos compactos** — máximo 7 caracteres, seguros para URL\n- **Espaço de endereçamento massivo** — 3,5T+ códigos possíveis\n- **Segurança por ofuscação** — não sequenciais, não enumeráveis"
+    },
+    "storage": {
+      "title": "Armazenamento em Escala",
+      "content": "Nesta demo, armazenamos URLs no **localStorage do seu navegador**. É efêmero, limitado a ~5MB, e acessível apenas neste dispositivo.\n\nEm produção com **100M+ URLs**, você precisaria de bancos de dados distribuídos:\n\n**DynamoDB** — Armazenamento chave-valor da AWS. Particione pelo código curto como chave primária. Oferece leituras em milissegundos em qualquer escala. Auto-escala throughput, mas custos crescem com unidades de capacidade de leitura/escrita.\n\n**Apache Cassandra** — Armazenamento wide-column projetado para escalabilidade horizontal. Dados são distribuídos entre nós usando hashing consistente. Excelente throughput de escrita, consistência configurável (ONE, QUORUM, ALL), e replicação multi-datacenter nativa.\n\nAmbos lidam com sharding nativamente:\n- **DynamoDB**: Particionamento automático por chave de hash\n- **Cassandra**: Hash ring consistente distribui dados entre nós\n\nPara esta demo → seu navegador é o banco de dados."
+    },
+    "cache": {
+      "title": "Camada de Cache",
+      "content": "Quando uma URL curta é acessada, buscar no banco de dados toda vez é desperdício — especialmente para links populares.\n\nUm **cache** (como Redis ou Memcached) fica entre sua aplicação e o banco de dados:\n\n1. **Requisição chega** → verifica o cache primeiro\n2. **Cache HIT** → retorna imediatamente (sub-milissegundo)\n3. **Cache MISS** → consulta banco de dados, armazena resultado no cache, retorna\n\nEste é o padrão **cache-aside** (lazy loading). URLs populares ficam quentes no cache, reduzindo a carga do banco de dados em **80-90%**.\n\nSimulamos isso com um cache **LRU (Least Recently Used)** no navegador. Quando o cache está cheio, a entrada menos recentemente acessada é removida para dar espaço a novas.\n\nEm produção, um cluster Redis com ~128MB pode cachear milhões de URLs populares."
+    },
+    "redirects": {
+      "title": "Redirecionamentos 301 vs 302",
+      "content": "Quando uma URL curta é resolvida, o servidor responde com um redirecionamento HTTP:\n\n**302 Found (Redirecionamento Temporário)** — O navegador segue o redirecionamento mas NÃO faz cache. Toda visita chega ao servidor, o que significa:\n- ✅ Analytics completo em cada clique\n- ✅ Possibilidade de mudar o destino depois\n- ❌ Levemente mais lento (round-trip extra)\n\n**301 Moved Permanently (Redirecionamento Permanente)** — O navegador faz cache do redirecionamento. Visitas futuras vão direto ao destino:\n- ✅ Visitas subsequentes mais rápidas\n- ❌ Sem analytics após primeira visita (servidor é ignorado)\n- ❌ Difícil mudar o destino (navegadores fazem cache agressivamente)\n\nUsamos **302** nesta demo porque analytics e flexibilidade importam mais que economizar alguns milissegundos. A maioria dos grandes encurtadores de URL (bit.ly, TinyURL) também usa 302 por essa razão."
+    },
+    "birthdayParadox": {
+      "title": "Por Que Não Fazer Hash da URL? O Paradoxo do Aniversário",
+      "content": "Uma abordagem alternativa é fazer **hash do conteúdo da URL** diretamente (ex: MD5, SHA-256, ou um hash customizado) e usar o resultado como código curto. Parece elegante — a mesma URL sempre produz o mesmo código, e nenhum contador é necessário.\n\nMas isso esbarra no **paradoxo do aniversário**: em um conjunto de valores escolhidos aleatoriamente de um espaço de tamanho N, a probabilidade de dois valores colidirem atinge 50% com apenas ~**√N** valores.\n\nPor exemplo:\n- Hash de 31 bits → colisão com ~**46.340 URLs** (catastrófico)\n- Hash de 53 bits → colisão com ~**94,9 milhões de URLs** (melhor, mas ainda arriscado em escala)\n- Hash de 128 bits (MD5) → colisão com ~**18,4 quintilhões** (seguro, mas produz códigos de 22+ caracteres)\n\nVocê precisaria de um hash muito largo para ser seguro, o que anula o propósito de códigos curtos. E mesmo assim, é necessário verificar o banco de dados em cada escrita para tratar a rara colisão.\n\n**Nossa abordagem evita isso completamente**: IDs sequenciais são únicos por definição. O ID `42` nunca vai conflitar com o ID `43`. A camada de ofuscação do Sqids esconde a natureza sequencial para que usuários não consigam enumerar URLs, mas por baixo, a unicidade é garantida pelo contador — não por matemática probabilística.\n\n**Em produção em escala**, o contador poderia ser:\n- Uma coluna **auto-increment** no banco de dados (PostgreSQL, MySQL)\n- Um gerador de IDs distribuído como **Snowflake do Twitter** ou **UUID v7**\n- Um comando **Redis INCR** para incrementos atômicos e rápidos entre múltiplos servidores"
+    },
+    "systemDesign": {
+      "title": "Visão Geral do System Design",
+      "content": "Um encurtador de URL em produção em escala se parece com isto:\n\n**Caminho de Escrita**: Cliente → API Gateway → URL Service → Gerar código curto → Armazenar no BD → Retornar URL curta\n\n**Caminho de Leitura**: Cliente → CDN/Load Balancer → URL Service → Verificar Cache → (miss) Verificar BD → Redirecionamento 302\n\n**Componentes chave**:\n- **API Gateway**: Rate limiting, autenticação\n- **URL Service**: Stateless, escalável horizontalmente\n- **Camada de Cache**: Cluster Redis para URLs populares\n- **Banco de Dados**: DynamoDB/Cassandra com sharding\n- **Analytics**: Stream assíncrono de eventos (Kafka) para rastreamento de cliques\n- **CDN**: Distribuição geográfica para menor latência\n\nCom 100M URLs e ~1B redirecionamentos/mês, você precisaria de ~30 servidores de aplicação, um cluster Redis de 3 nós e um banco de dados devidamente particionado."
+    }
+  }
+}

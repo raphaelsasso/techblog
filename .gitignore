@@ -1,0 +1,9 @@
+node_modules
+dist
+.svelte-kit
+.vercel
+build
+.env
+*.local
+.DS_Store
+coverage

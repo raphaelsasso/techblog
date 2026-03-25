@@ -1,0 +1,79 @@
+{
+  "nav": {
+    "home": "Home",
+    "language": "PT"
+  },
+  "home": {
+    "greeting": "Hello, I'm",
+    "name": "Raphael Sasso",
+    "intro": "This is Raphael Sasso blog where I post about System Design and Architecture",
+    "techExamples": "Live Tech Examples",
+    "techExamplesDescription": "Hands-on system design concepts you can interact with right in your browser.",
+    "urlShortener": "URL Shortener",
+    "urlShortenerDescription": "Explore how URL shorteners work under the hood: base62 encoding, hashing, caching strategies, and redirect semantics."
+  },
+  "urlShortener": {
+    "title": "URL Shortener",
+    "subtitle": "A system design deep-dive with a working demo",
+    "inputPlaceholder": "google.com/very-long-path...",
+    "shorten": "Shorten",
+    "shortenedUrls": "Shortened URLs",
+    "noUrls": "No URLs shortened yet. Try one above!",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "visit": "Visit",
+    "clicks": "clicks",
+    "clear": "Clear All",
+    "originalUrl": "Original URL",
+    "shortCode": "Short Code",
+    "created": "Created",
+    "actions": "Actions"
+  },
+  "redirect": {
+    "title": "Redirecting...",
+    "lookingUp": "Looking up short code",
+    "checkingCache": "Checking cache...",
+    "cacheHit": "Cache HIT!",
+    "cacheMiss": "Cache MISS - checking storage...",
+    "found": "URL found! Redirecting to:",
+    "notFound": "Short code not found",
+    "notFoundDescription": "This short code doesn't exist in your browser's storage. URLs are stored locally and won't be available in other browsers.",
+    "backHome": "Back to Home",
+    "redirecting": "Redirecting in"
+  },
+  "cache": {
+    "title": "Cache Simulator",
+    "hits": "Hits",
+    "misses": "Misses",
+    "hitRatio": "Hit Ratio",
+    "entries": "Cached Entries",
+    "empty": "Cache is empty",
+    "maxSize": "Max Size"
+  },
+  "explanations": {
+    "base62": {
+      "title": "How We Generate Short Codes: Incremental ID + base62 + Hashids",
+      "content": "Our approach uses three layers working together:\n\n**1. Incremental ID** — Every URL gets a unique, sequential numeric ID (1, 2, 3, ...). This is the simplest way to guarantee uniqueness — no two URLs share an ID, so collisions are impossible by design. In production, the database auto-increments this. In this demo, a counter in your browser's localStorage does the job.\n\n**2. base62 encoding** — The ID is encoded using characters `a-z`, `A-Z`, `0-9` — 62 possible characters per position. With a maximum of **7 characters**, we get:\n\n`62^7 = 3,521,614,606,208` (~3.5 trillion unique codes)\n\nThat's more than enough for virtually any URL shortening service. base62 is URL-safe (no special characters that need escaping) and case-sensitive, maximizing information density.\n\n**3. Hashids obfuscation (Sqids)** — A raw base62-encoded sequential ID would be predictable: `1 → aaaaab`, `2 → aaaaac`, etc. An attacker could enumerate all your URLs by incrementing. **Sqids** (the modern hashids library) shuffles the encoding so that sequential inputs produce non-sequential, non-guessable outputs. The mapping is deterministic and reversible, but the pattern isn't obvious without knowing the alphabet shuffle.\n\nThe combination gives us:\n- **Zero collisions** — incremental IDs are unique by definition\n- **Compact codes** — 7 chars max, URL-safe\n- **Massive address space** — 3.5T+ possible codes\n- **Security through obfuscation** — non-sequential, non-enumerable"
+    },
+    "storage": {
+      "title": "Storage at Scale",
+      "content": "In this demo, we store URLs in your **browser's localStorage**. It's ephemeral, limited to ~5MB, and only accessible on this device.\n\nIn production with **100M+ URLs**, you'd need distributed databases:\n\n**DynamoDB** — AWS's key-value store. Partition by the short code as the primary key. Offers single-digit millisecond reads at any scale. Auto-scales throughput, but costs grow with read/write capacity units.\n\n**Apache Cassandra** — Wide-column store designed for horizontal scaling. Data is distributed across nodes using consistent hashing. Excellent write throughput, tunable consistency (ONE, QUORUM, ALL), and natural multi-datacenter replication.\n\nBoth handle sharding natively:\n- **DynamoDB**: Automatic partitioning by hash key\n- **Cassandra**: Consistent hash ring distributes data across nodes\n\nFor this demo → your browser is the database."
+    },
+    "cache": {
+      "title": "Caching Layer",
+      "content": "When a short URL is accessed, looking it up in the database every time is wasteful — especially for popular links.\n\nA **cache** (like Redis or Memcached) sits between your app and the database:\n\n1. **Request arrives** → check cache first\n2. **Cache HIT** → return immediately (sub-millisecond)\n3. **Cache MISS** → query database, store result in cache, return\n\nThis is the **cache-aside** (lazy loading) pattern. Popular URLs stay hot in cache, reducing database load by **80-90%**.\n\nWe simulate this with an **LRU (Least Recently Used)** cache in the browser. When the cache is full, the least recently accessed entry gets evicted to make room for new ones.\n\nIn production, a Redis cluster with ~128MB can cache millions of hot URLs."
+    },
+    "redirects": {
+      "title": "301 vs 302 Redirects",
+      "content": "When a short URL is resolved, the server responds with an HTTP redirect:\n\n**302 Found (Temporary Redirect)** — The browser follows the redirect but does NOT cache it. Every visit hits the server, which means:\n- ✅ Full analytics on every click\n- ✅ Ability to change the destination later\n- ❌ Slightly slower (extra round-trip)\n\n**301 Moved Permanently** — The browser caches the redirect. Future visits go directly to the destination:\n- ✅ Faster subsequent visits\n- ❌ No analytics after first visit (server is bypassed)\n- ❌ Hard to change destination (browsers cache aggressively)\n\nWe use **302** in this demo because analytics and flexibility matter more than saving a few milliseconds. Most major URL shorteners (bit.ly, TinyURL) also use 302 for this reason."
+    },
+    "birthdayParadox": {
+      "title": "Why Not Hash the URL? The Birthday Paradox",
+      "content": "An alternative approach is to **hash the URL content** directly (e.g., MD5, SHA-256, or a custom hash) and use the result as the short code. This seems elegant — the same URL always produces the same code, and no counter is needed.\n\nBut this runs into the **birthday paradox**: in a set of randomly chosen values from a space of size N, the probability of two values colliding reaches 50% at only ~**√N** values.\n\nFor example:\n- A 31-bit hash → collision at ~**46,340 URLs** (catastrophic)\n- A 53-bit hash → collision at ~**94.9 million URLs** (better, but still risky at scale)\n- A 128-bit hash (MD5) → collision at ~**18.4 quintillion** (safe, but produces 22+ character codes)\n\nYou'd need a very wide hash to be safe, which defeats the purpose of short codes. And even then, you must check the database on every write to handle the rare collision.\n\n**Our approach avoids this entirely**: sequential IDs are unique by definition. ID `42` will never conflict with ID `43`. The Sqids obfuscation layer hides the sequential nature so users can't enumerate URLs, but underneath, uniqueness is guaranteed by the counter — not by probabilistic math.\n\n**In production at scale**, the counter could be:\n- A database **auto-increment** column (PostgreSQL, MySQL)\n- A distributed ID generator like **Twitter's Snowflake** or **UUID v7**\n- A **Redis INCR** command for atomic, fast counter increments across multiple app servers"
+    },
+    "systemDesign": {
+      "title": "System Design Overview",
+      "content": "A production URL shortener at scale looks like this:\n\n**Write Path**: Client → API Gateway → URL Service → Generate short code → Store in DB → Return short URL\n\n**Read Path**: Client → CDN/Load Balancer → URL Service → Check Cache → (miss) Check DB → 302 Redirect\n\n**Key components**:\n- **API Gateway**: Rate limiting, authentication\n- **URL Service**: Stateless, horizontally scalable\n- **Cache Layer**: Redis cluster for hot URLs\n- **Database**: DynamoDB/Cassandra with sharding\n- **Analytics**: Async event stream (Kafka) for click tracking\n- **CDN**: Geographic distribution for lower latency\n\nAt 100M URLs with ~1B redirects/month, you'd need ~30 application servers, a 3-node Redis cluster, and a properly sharded database."
+    }
+  }
+}

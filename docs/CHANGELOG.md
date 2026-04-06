@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- **Social Graph — TAO post**: New interactive "live tech example" page at `/social-graph` exploring Facebook's TAO system. Users create typed objects (User, Post, Photo, Comment, CheckIn) and associations (FRIEND, LIKES, AUTHORED, COMMENTED_ON, TAGGED_IN) with automatic inverse edge creation. Includes SVG graph visualization, TAO-style query panel (point, range, count), two-tier cache simulator (follower/leader/storage), and 8 educational explanation blocks covering the data model, Memcache-MySQL problem, TAO API, caching architecture, sharding, consistency, system design, and references.
+- **Association directionality indicators**: AssociationCreator shows bidirectional (`↔`) vs unidirectional (`→`) badges with auto-inverse type hints for each association type.
+- **Markdown link support in ExplanationBlock**: `[text](url)` syntax in explanation content now renders as clickable links with `target="_blank"`.
+- **Homepage card for Social Graph**: New card on the homepage linking to the `/social-graph` post.
+
 - **PostHog analytics**: Integrated `posthog-js` for visitor tracking with manual pageview capture on SvelteKit client-side navigation via `afterNavigate`. Analytics are opt-in — disabled when `VITE_POSTHOG_KEY` is not set.
 - **Terminal autocomplete**: Ghost text suggestions appear as you type commands on the homepage terminal; press `Tab` to complete. A visual `tab` badge indicates when a suggestion is available.
 - **Background effects upgrade**: Replaced per-pixel simplex noise with a multi-layered canvas scene featuring 6 flowing aurora orbs (radial gradients with `screen` blending), 60 floating particles with flicker, and a vignette overlay. Debounced resize handling.

@@ -16,6 +16,7 @@
 
   function formatText(text: string): string {
     return text
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/`(.+?)`/g, '<code>$1</code>')
       .replace(/\n- /g, '\n• ')
@@ -122,5 +123,16 @@
     padding: 0.125rem 0.375rem;
     border-radius: 4px;
     color: var(--green);
+  }
+
+  .explanation-content :global(a) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: opacity var(--transition);
+  }
+
+  .explanation-content :global(a:hover) {
+    opacity: 0.8;
   }
 </style>

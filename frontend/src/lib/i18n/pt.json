@@ -10,7 +10,9 @@
     "techExamples": "Exemplos Técnicos ao Vivo",
     "techExamplesDescription": "Conceitos práticos de system design que você pode interagir diretamente no seu navegador.",
     "urlShortener": "Encurtador de URL",
-    "urlShortenerDescription": "Explore como encurtadores de URL funcionam por baixo dos panos: codificação base62, hashing, estratégias de cache e semântica de redirecionamento."
+    "urlShortenerDescription": "Explore como encurtadores de URL funcionam por baixo dos panos: codificação base62, hashing, estratégias de cache e semântica de redirecionamento.",
+    "socialGraph": "Grafo Social — TAO",
+    "socialGraphDescription": "Descubra como o TAO do Facebook modela bilhões de relacionamentos como objetos e associações, com cache em duas camadas e consultas em grafo."
   },
   "urlShortener": {
     "title": "Encurtador de URL",
@@ -50,6 +52,46 @@
     "empty": "Cache está vazio",
     "maxSize": "Tamanho Máximo"
   },
+  "socialGraph": {
+    "title": "Grafo Social — TAO",
+    "subtitle": "Como o Facebook modela bilhões de relacionamentos com objetos, associações e um cache em duas camadas",
+    "createObject": "Criar Objeto",
+    "objectType": "Tipo",
+    "objectName": "Nome",
+    "objectNamePlaceholder": "ex: Alice, Foto da Praia...",
+    "create": "Criar",
+    "createAssociation": "Criar Associação",
+    "sourceObject": "Origem",
+    "associationType": "Tipo",
+    "targetObject": "Destino",
+    "link": "Vincular",
+    "bidirectional": "Bidirecional",
+    "unidirectional": "Unidirecional",
+    "autoInverse": "Cria inverso automaticamente",
+    "graphTitle": "Grafo Social",
+    "noObjects": "Nenhum objeto ainda. Crie alguns acima para ver o grafo.",
+    "queryPanel": "Painel de Consultas TAO",
+    "pointQuery": "Consulta Pontual",
+    "rangeQuery": "Consulta por Faixa",
+    "countQuery": "Contagem",
+    "runQuery": "Executar",
+    "pointQueryHint": "assoc_get(id1, type, id2) — Essa associação existe?",
+    "rangeQueryHint": "assoc_range(id1, type, limit) — Obter associações recentes por tempo",
+    "countQueryHint": "assoc_count(id1, type) — Quantas associações desse tipo?",
+    "cacheTiers": "Simulador de Cache em Duas Camadas",
+    "resetCache": "Resetar Cache",
+    "client": "Cliente",
+    "follower": "Follower",
+    "leader": "Leader",
+    "storage": "Armazém",
+    "hits": "Acertos",
+    "misses": "Erros",
+    "hitRatio": "Taxa de Acerto",
+    "reads": "Leituras",
+    "totalQueries": "Total",
+    "reseed": "Resetar Dados de Exemplo",
+    "clearAll": "Limpar Tudo"
+  },
   "explanations": {
     "base62": {
       "title": "Como Geramos Códigos Curtos: ID Incremental + base62 + Hashids",
@@ -74,6 +116,38 @@
     "systemDesign": {
       "title": "Visão Geral do System Design",
       "content": "Um encurtador de URL em produção em escala se parece com isto:\n\n**Caminho de Escrita**: Cliente → API Gateway → URL Service → Gerar código curto → Armazenar no BD → Retornar URL curta\n\n**Caminho de Leitura**: Cliente → CDN/Load Balancer → URL Service → Verificar Cache → (miss) Verificar BD → Redirecionamento 302\n\n**Componentes chave**:\n- **API Gateway**: Rate limiting, autenticação\n- **URL Service**: Stateless, escalável horizontalmente\n- **Camada de Cache**: Cluster Redis para URLs populares\n- **Banco de Dados**: DynamoDB/Cassandra com sharding\n- **Analytics**: Stream assíncrono de eventos (Kafka) para rastreamento de cliques\n- **CDN**: Distribuição geográfica para menor latência\n\nCom 100M URLs e ~1B redirecionamentos/mês, você precisaria de ~30 servidores de aplicação, um cluster Redis de 3 nós e um banco de dados devidamente particionado."
+    },
+    "objectsAndAssociations": {
+      "title": "Objetos e Associações: O Modelo de Dados do Grafo Social",
+      "content": "Nesta demo, cada item que você cria — um usuário, post, foto, comentário ou check-in — é um **objeto TAO**. Cada objeto tem um ID tipado, um conjunto de campos nomeados e um timestamp de criação. Relacionamentos entre objetos — amizades, curtidas, autoria, marcações — são **associações** (arestas direcionadas) agrupadas pelo objeto de origem.\n\nEste é o mesmo modelo que o Facebook introduziu em 2007 para substituir queries SQL diretas. Em vez de pensar em tabelas e joins, os engenheiros pensam em **nós** e **arestas**. Um check-in na Golden Gate Bridge é um objeto. Alice marcando Bob nesse check-in é uma associação do tipo `TAGGED_IN` de Alice para o check-in.\n\nCada tipo de associação pode definir um **tipo inverso**. Quando você cria uma aresta `LIKES` de David para um check-in, o TAO automaticamente cria uma aresta `LIKED_BY` na direção reversa. Isso garante integridade referencial e torna a travessia em ambas direções eficiente — \"Quem curtiu este post?\" e \"O que David curtiu?\" são ambas rápidas.\n\nOs dados formam um **multigrafo direcionado rotulado**: múltiplas associações de tipos diferentes podem conectar o mesmo par de objetos. Alice pode tanto `AUTHORED` quanto `TAGGED_IN` o mesmo check-in — cada uma é uma aresta tipada separada.\n\n**Propriedades chave**:\n- **Objetos**: Nós tipados com campos chave-valor (User, Post, Photo, Comment, CheckIn)\n- **Associações**: Arestas direcionadas tipadas com criação automática de inverso\n- **Ordenados por tempo**: Cada associação carrega um timestamp, permitindo range queries eficientes\n- **Sem joins**: A estrutura de grafo elimina a necessidade de JOINs SQL"
+    },
+    "whyNotSql": {
+      "title": "Por Que Não SQL? O Problema Memcache-MySQL",
+      "content": "Nesta demo, objetos e associações vivem no localStorage do seu navegador — simples e rápido. Mas o desafio real do Facebook em meados dos anos 2000 era muito mais complexo.\n\nEm 2005, o Facebook usava **MySQL + Memcache** para servir o grafo social. MySQL cuidava da persistência, e Memcache atuava como um gigante cache distribuído chave-valor. Funcionava, mas tinha problemas sérios:\n\n**1. Dois modelos de dados incompatíveis** — Engenheiros tinham que mapear mentalmente entre tabelas relacionais (MySQL) e pares chave-valor planos (Memcache). Cada feature exigia escrever código para ambos os sistemas, entender seus diferentes modos de falha e mantê-los sincronizados.\n\n**2. Pesadelo de consistência de cache** — Quando dados mudavam no MySQL, as entradas correspondentes no Memcache tinham que ser invalidadas. Pequenas atualizações (uma nova curtida) exigiam invalidar listas serializadas inteiras, destruindo as taxas de acerto do cache.\n\n**3. Transferência de dados desperdiçada** — Para verificar \"Alice curtiu este post?\", o sistema tinha que buscar uma lista inteira de curtidas do Memcache, transferi-la pela rede para o web server e escaneá-la — mesmo que a resposta fosse um único booleano.\n\n**4. Thundering herds** — Quando uma entrada popular do cache expirava, centenas de requisições simultâneas todas falhavam no cache e martelavam o banco de dados. Sem coordenação no lado do servidor, o Memcache não conseguia prevenir isso.\n\nEsses problemas levaram a bugs, inconsistências e problemas de performance que exigiam conhecimento profundo de sistemas para debugar. Em 2009, o Facebook começou a construir o **TAO** — um data store distribuído construído especificamente que fala a linguagem de objetos e associações nativamente, esconde a camada de cache inteiramente e resolve todos os quatro problemas.\n\nO resultado: engenheiros de produto pararam de pensar em invalidação de cache e queries SQL. Eles apenas chamavam `assoc_get(alice, LIKES, post)` e o TAO cuidava de tudo."
+    },
+    "taoApi": {
+      "title": "API do TAO: Consultas Pontuais, por Faixa e Contagem",
+      "content": "Nesta demo, o painel de consultas permite executar os mesmos três tipos de query que o TAO expõe aos engenheiros do Facebook. A API do TAO foi mantida deliberadamente simples — sem travessias complexas, sem pattern matching, sem joins no servidor.\n\n**1. Consultas Pontuais** — `assoc_get(id1, type, id2)` — Busca uma associação específica pelo seu triplet completo. \"Alice curtiu este post?\" Mais frequentemente usada para verificar existência — e a resposta é `false` para a grande maioria dos itens no News Feed. No antigo sistema Memcache, responder isso exigia buscar uma lista serializada inteira. O TAO responde com um único lookup O(1).\n\n**2. Consultas por Faixa** — `assoc_range(id1, type, limit, offset)` — Encontra associações de saída de um dado tipo, ordenadas por tempo. \"Quais são os 50 comentários mais recentes neste post?\" Suporta paginação baseada em cursor para iteração eficiente. O TAO armazena associações ordenadas pelo campo `time`, explorando a **localidade de tempo de criação** — dados criados recentemente são mais prováveis de serem acessados.\n\n**3. Consultas de Contagem** — `assoc_count(id1, type)` — Obtém o número total de associações. \"Quantas curtidas este post tem?\" O TAO opcionalmente mantém contagens atualizadas conforme arestas são adicionadas e removidas, retornando a resposta em tempo constante sem varredura.\n\n**Por que tão simples?** Travessias complexas de grafo durante uma requisição de usuário são quase sempre um design subótimo. Se você precisa de \"amigos de amigos que curtiram posts sobre o tópico X\", isso deve ser um job em background — não uma query em tempo real. A simplicidade ajuda engenheiros a encontrar a divisão correta de trabalho entre app servers, cache e armazenamento."
+    },
+    "twoTierCache": {
+      "title": "Cache em Duas Camadas: Leaders e Followers",
+      "content": "Nesta demo, cada consulta flui através de um cache simulado de duas camadas antes de acessar o armazenamento. Isso espelha a arquitetura real do TAO:\n\n**Camada 1: Followers** — A primeira camada de cache que todas as requisições do cliente acessam. Pequena, rápida, co-localizada com os servidores de aplicação. Em produção, uma região geográfica tem muitos clusters follower. Se os dados estão aqui, a resposta é quase instantânea. O cache follower nesta demo comporta até **8 entradas**.\n\n**Camada 2: Leaders** — Quando o follower falha, ele consulta o leader. Leaders têm caches maiores (nossa demo usa **20 entradas**), e são o ponto único de coordenação para escritas dentro de uma região. Todas as escritas passam pelos followers para os leaders, e atualizações de cache propagam de volta pela cadeia.\n\n**Armazenamento (MySQL)** — O armazém persistente, acessado apenas quando o leader falha no cache. Em produção, MySQL gerencia os dados reais em disco.\n\nO caminho de escrita é **write-through**: Cliente → Follower → Leader → MySQL. A resposta propaga de volta com entradas frescas de cache em cada camada. Isso simplifica a consistência do cache — nenhum protocolo separado de invalidação é necessário.\n\n**Por que duas camadas?** Um único cluster gigante de cache seria um gargalo. A camada follower permite ao TAO escalar leituras horizontalmente — adicione mais clusters follower para lidar com mais tráfego. A camada leader fornece coordenação de consistência e protege o banco de dados. Durante uma interrupção planejada ou não, leaders atuam como rede de segurança.\n\nEm produção, o TAO serve **bilhões de leituras por segundo** em clusters distribuídos geograficamente. A taxa de acerto do follower é tipicamente **>95%**, significando que menos de 5% das requisições chegam ao leader."
+    },
+    "sharding": {
+      "title": "Sharding e Distribuição de Dados",
+      "content": "Nesta demo, todos os dados vivem em um navegador — sem necessidade de sharding. Em produção, o grafo social do Facebook é particionado em **centenas de milhares de shards**.\n\nTodos os objetos e associações no mesmo shard são armazenados no **mesmo banco MySQL** e cacheados no **mesmo conjunto de servidores** em cada cluster de cache. Essa co-localização é crítica — quando você carrega o perfil de um usuário, o objeto do usuário e suas associações recentes podem frequentemente ser buscados do mesmo shard, reduzindo comunicação cross-shard.\n\n**Atribuição de shard** — Objetos podem opcionalmente ser atribuídos a shards específicos no momento da criação. Um comentário em um post pode ser co-localizado com o shard daquele post, então range queries como \"todos os comentários neste post\" ficam dentro de um único shard.\n\n**Migração de shard** — Shards podem ser migrados ou clonados entre servidores para equalizar a carga. Isso é essencial para lidar com **picos de carga** — quando uma celebridade posta uma foto que aparece em dezenas de milhões de News Feeds simultaneamente, o shard contendo aquela foto fica extremamente quente.\n\n**O problema do conteúdo viral** — Um punhado de objetos pode receber taxas de requisição milhões de vezes maiores que a média. O TAO suaviza esses picos através de migração de shards, o cache multi-camada (followers absorvem a maioria das leituras) e replicação entre regiões geográficas.\n\n**Números em escala**:\n- Centenas de milhares de shards em múltiplas regiões\n- Cada shard: ~1-10 GB de dados no MySQL\n- Shards quentes podem ser replicados para múltiplos conjuntos de servidores\n- O mapeamento shard-servidor é ajustável dinamicamente"
+    },
+    "consistency": {
+      "title": "Modelo de Consistência: Eventual vs Forte",
+      "content": "Nesta demo, tudo é instantaneamente consistente — seu navegador é tanto o cache quanto o banco de dados. Em produção com data centers ao redor do globo, consistência se torna um desafio fundamental.\n\nO TAO escolheu **consistência eventual** como padrão, guiado pelo **teorema CAP**: em um sistema distribuído experimentando partições de rede, você deve escolher entre consistência e disponibilidade. Para a maioria das features sociais, perder disponibilidade (o site cai) é pior do que mostrar brevemente dados desatualizados.\n\n**Região primária única** — Cada shard tem uma região primária que lida com todas as escritas. Replicação MySQL propaga atualizações para regiões secundárias assincronamente. Uma região secundária **não pode escrever** em seu MySQL local — ela encaminha todas as escritas para a região primária.\n\n**Consistência leitura-após-escrita** — O design write-through do cache do TAO garante que um usuário que escreve dados em uma região secundária verá sua própria escrita imediatamente. A escrita vai: Follower Secundário → Leader Secundário → Leader Primário → MySQL Primário → (replicação async) → MySQL Secundário. Mas o cache ao longo do caminho de escrita é atualizado sincronamente, então o usuário vê sua mudança.\n\n**Lidando com falhas** — Quando uma instância MySQL cai, a região primária pode ser automaticamente transferida para outra região. Este é um procedimento rotineiro, não uma emergência.\n\n**Opção de consistência forte** — Para os poucos casos que exigem (transações financeiras, controles de privacidade), clientes TAO podem sobrescrever o padrão e forçar leituras da região primária. Isso custa mais latência e arrisca reduzir disponibilidade, então é usado com parcimônia.\n\n**A troca pragmática**: Um usuário pode brevemente ver uma contagem de curtidas de 4.231 em vez de 4.232. Para interações sociais, isso é aceitável. Para a configuração de privacidade que controla quem pode ver seu perfil? Essa usa consistência forte."
+    },
+    "socialGraphSystemDesign": {
+      "title": "Visão Geral do System Design",
+      "content": "Um data store de grafo social em produção como o TAO se parece com isto:\n\n**Caminho de Leitura**: Cliente → Cache Follower → (miss) Cache Leader → (miss) MySQL → Resposta retorna preenchendo ambos os caches\n\n**Caminho de Escrita**: Cliente → Follower → Leader → MySQL → Associação inversa auto-criada → Cache atualizado no caminho de resposta\n\n**Multi-região**: Região Primária lida com escritas → Replicação MySQL → Regiões Secundárias recebem atualizações async\n\n**Componentes chave na escala do Facebook**:\n- **Servidores TAO**: Milhares de servidores organizados como clusters follower e leader\n- **Clusters MySQL**: Centenas de milhares de shards em múltiplas regiões\n- **Clusters Follower**: Muitos por região, escaláveis horizontalmente para throughput de leitura\n- **Clusters Leader**: Um leader lógico por região, coordena escritas e consistência de cache\n- **Replicação**: Replicação no nível MySQL entre regiões primária e secundárias\n- **Gerenciador de Shards**: Mapeamento dinâmico shard-servidor, lida com migração e balanceamento de carga\n\n**Números de escala (do paper de 2013)**:\n- **Bilhões** de requisições de leitura por segundo\n- **Milhões** de requisições de escrita por segundo\n- Milhares de tipos de dados em todas as features do Facebook\n- Latência sub-milissegundo para acertos de cache, milissegundos de um dígito para leituras de armazenamento\n- **>99,8%** de taxa de acerto geral do cache em ambas camadas\n\nA genialidade do TAO é que engenheiros de produto nunca veem nada disso. Eles chamam `assoc_get`, `assoc_range` ou `assoc_count` — e o TAO cuida de caching, replicação, sharding, consistência e manutenção de inversos de forma transparente."
+    },
+    "socialGraphReferences": {
+      "title": "Referências e Leitura Adicional",
+      "content": "**1. [TAO: The power of the graph — Meta Engineering](https://engineering.fb.com/2013/06/25/core-infra/tao-the-power-of-the-graph/)** — O post original do blog apresentando o design, motivação e arquitetura do TAO. Escrito pela equipe de engenharia que o construiu.\n\n**2. [TAO: Facebook's Distributed Data Store for the Social Graph (USENIX ATC '13)](https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf)** — O paper acadêmico completo com implementação detalhada, benchmarks de performance, análise de consistência e tratamento de falhas. Leitura essencial para entender o sistema em profundidade.\n\n**3. [Memcached](https://memcached.org/)** — O sistema de cache distribuído em memória que o Facebook usava antes do TAO. Entender as limitações do memcached ajuda a explicar por que o TAO foi necessário.\n\n**4. [MySQL InnoDB Storage Engine](https://dev.mysql.com/doc/refman/en/innodb-storage-engine.html)** — O motor de armazenamento persistente que o TAO continua usando por baixo. A inovação do TAO está na camada de cache e API acima do MySQL, não em substituí-lo.\n\n**5. [Teorema CAP (Wikipedia)](https://en.wikipedia.org/wiki/CAP_theorem)** — A fundamentação teórica para a escolha do TAO de consistência eventual como modelo padrão. Explica a troca fundamental entre consistência e disponibilidade em sistemas distribuídos.\n\n**6. [TAOBench: An End-to-End Social Network Benchmark](https://engineering.fb.com/2022/09/07/data-infrastructure/taobench/)** — Ferramenta de benchmark open-source lançada pela Meta em 2022 para avaliar data stores contra workloads semelhantes ao TAO."
     }
   }
 }

@@ -10,7 +10,9 @@
     "techExamples": "Live Tech Examples",
     "techExamplesDescription": "Hands-on system design concepts you can interact with right in your browser.",
     "urlShortener": "URL Shortener",
-    "urlShortenerDescription": "Explore how URL shorteners work under the hood: base62 encoding, hashing, caching strategies, and redirect semantics."
+    "urlShortenerDescription": "Explore how URL shorteners work under the hood: base62 encoding, hashing, caching strategies, and redirect semantics.",
+    "socialGraph": "Social Graph — TAO",
+    "socialGraphDescription": "Discover how Facebook's TAO models billions of relationships as objects and associations, with two-tier caching and graph queries."
   },
   "urlShortener": {
     "title": "URL Shortener",
@@ -50,6 +52,46 @@
     "empty": "Cache is empty",
     "maxSize": "Max Size"
   },
+  "socialGraph": {
+    "title": "Social Graph — TAO",
+    "subtitle": "How Facebook models billions of relationships with objects, associations, and a two-tier cache",
+    "createObject": "Create Object",
+    "objectType": "Type",
+    "objectName": "Name",
+    "objectNamePlaceholder": "e.g. Alice, Beach Photo...",
+    "create": "Create",
+    "createAssociation": "Create Association",
+    "sourceObject": "Source",
+    "associationType": "Type",
+    "targetObject": "Target",
+    "link": "Link",
+    "bidirectional": "Bidirectional",
+    "unidirectional": "Unidirectional",
+    "autoInverse": "Auto-creates inverse",
+    "graphTitle": "Social Graph",
+    "noObjects": "No objects yet. Create some above to see the graph.",
+    "queryPanel": "TAO Query Panel",
+    "pointQuery": "Point Query",
+    "rangeQuery": "Range Query",
+    "countQuery": "Count Query",
+    "runQuery": "Run",
+    "pointQueryHint": "assoc_get(id1, type, id2) — Does this association exist?",
+    "rangeQueryHint": "assoc_range(id1, type, limit) — Get recent associations by time",
+    "countQueryHint": "assoc_count(id1, type) — How many associations of this type?",
+    "cacheTiers": "Two-Tier Cache Simulator",
+    "resetCache": "Reset Cache",
+    "client": "Client",
+    "follower": "Follower",
+    "leader": "Leader",
+    "storage": "Storage",
+    "hits": "Hits",
+    "misses": "Misses",
+    "hitRatio": "Hit Ratio",
+    "reads": "Reads",
+    "totalQueries": "Total",
+    "reseed": "Reset Example Data",
+    "clearAll": "Clear All"
+  },
   "explanations": {
     "base62": {
       "title": "How We Generate Short Codes: Incremental ID + base62 + Hashids",
@@ -74,6 +116,38 @@
     "systemDesign": {
       "title": "System Design Overview",
       "content": "A production URL shortener at scale looks like this:\n\n**Write Path**: Client → API Gateway → URL Service → Generate short code → Store in DB → Return short URL\n\n**Read Path**: Client → CDN/Load Balancer → URL Service → Check Cache → (miss) Check DB → 302 Redirect\n\n**Key components**:\n- **API Gateway**: Rate limiting, authentication\n- **URL Service**: Stateless, horizontally scalable\n- **Cache Layer**: Redis cluster for hot URLs\n- **Database**: DynamoDB/Cassandra with sharding\n- **Analytics**: Async event stream (Kafka) for click tracking\n- **CDN**: Geographic distribution for lower latency\n\nAt 100M URLs with ~1B redirects/month, you'd need ~30 application servers, a 3-node Redis cluster, and a properly sharded database."
+    },
+    "objectsAndAssociations": {
+      "title": "Objects and Associations: The Social Graph Data Model",
+      "content": "In this demo, every item you create — a user, post, photo, comment, or check-in — is a **TAO object**. Each object has a typed ID, a set of named fields, and a creation timestamp. Relationships between objects — friendships, likes, authorship, tags — are **associations** (directed edges) grouped by their origin object.\n\nThis is the same model Facebook introduced in 2007 to replace raw SQL queries. Instead of thinking in tables and joins, engineers think in **nodes** and **edges**. A check-in at the Golden Gate Bridge is an object. Alice tagging Bob in that check-in is an association of type `TAGGED_IN` from Alice to the check-in.\n\nEvery association type can define an **inverse type**. When you create a `LIKES` edge from David to a check-in, TAO automatically creates a `LIKED_BY` edge in the reverse direction. This guarantees referential integrity and makes traversal in both directions efficient — \"Who liked this post?\" and \"What did David like?\" are both fast.\n\nThe data forms a **labeled directed multigraph**: multiple associations of different types can connect the same pair of objects. Alice can both `AUTHORED` and `TAGGED_IN` the same check-in — each is a separate typed edge.\n\n**Key properties**:\n- **Objects**: Typed nodes with key-value fields (User, Post, Photo, Comment, CheckIn)\n- **Associations**: Typed directed edges with automatic inverse creation\n- **Time-ordered**: Every association carries a timestamp, enabling efficient range queries\n- **No joins**: The graph structure eliminates the need for SQL JOINs"
+    },
+    "whyNotSql": {
+      "title": "Why Not SQL? The Memcache-MySQL Problem",
+      "content": "In this demo, objects and associations live in your browser's localStorage — simple and fast. But Facebook's real challenge in the mid-2000s was far more complex.\n\nBy 2005, Facebook was using **MySQL + Memcache** to serve the social graph. MySQL handled persistence, and Memcache acted as a giant distributed key-value cache. This worked, but had serious problems:\n\n**1. Two incompatible data models** — Engineers had to mentally map between relational tables (MySQL) and flat key-value pairs (Memcache). Every feature required writing code for both systems, understanding their different failure modes, and keeping them in sync.\n\n**2. Cache consistency nightmares** — When data changed in MySQL, the corresponding Memcache entries had to be invalidated. Small updates (one new \"like\") required invalidating entire serialized lists, destroying cache hit rates.\n\n**3. Wasteful data transfer** — To check \"Does Alice like this post?\", the system had to fetch an entire list of likes from Memcache, transfer it over the network to the web server, and scan it — even though the answer was a single boolean.\n\n**4. Thundering herds** — When a popular cache entry expired, hundreds of simultaneous requests would all miss the cache and hammer the database. Without server-side coordination, Memcache couldn't prevent this.\n\nThese problems led to bugs, inconsistencies, and performance issues that required deep systems knowledge to debug. In 2009, Facebook started building **TAO** — a purpose-built distributed data store that speaks the language of objects and associations natively, hides the caching layer entirely, and solves all four problems.\n\nThe result: product engineers stopped thinking about cache invalidation and SQL queries entirely. They just called `assoc_get(alice, LIKES, post)` and TAO handled everything."
+    },
+    "taoApi": {
+      "title": "TAO API: Point, Range, and Count Queries",
+      "content": "In this demo, the query panel lets you run the same three query types that TAO exposes to Facebook engineers. TAO's API was kept deliberately simple — no complex traversals, no pattern matching, no server-side joins.\n\n**1. Point Queries** — `assoc_get(id1, type, id2)` — Look up a specific association by its full triplet. \"Does Alice like this post?\" Most often used to check existence — and the answer is `false` for the vast majority of items in a user's News Feed. In the old Memcache system, answering this required fetching an entire serialized list. TAO answers it with a single O(1) lookup.\n\n**2. Range Queries** — `assoc_range(id1, type, limit, offset)` — Find outgoing associations of a given type, ordered by time. \"What are the 50 most recent comments on this post?\" Supports cursor-based pagination for efficient iteration. TAO stores associations sorted by the `time` field, exploiting **creation-time locality** — recently created data is most likely to be accessed.\n\n**3. Count Queries** — `assoc_count(id1, type)` — Get the total number of associations. \"How many likes does this post have?\" TAO optionally maintains running counts as edges are added and removed, returning the answer in constant time without scanning.\n\n**Why so simple?** Complex graph traversals during a user request are almost always a suboptimal design. If you need \"friends of friends who liked posts about topic X\", that should be a background job — not a real-time query. The simplicity helps engineers find the right division of labor between app servers, cache, and storage."
+    },
+    "twoTierCache": {
+      "title": "Two-Tier Caching: Leaders and Followers",
+      "content": "In this demo, every query flows through a simulated two-tier cache before hitting storage. This mirrors TAO's real architecture:\n\n**Tier 1: Followers** — The first cache layer that all client requests hit. Small, fast, co-located with the application servers. In production, a geographic region has many follower clusters. If the data is here, the response is near-instant. The follower cache in this demo holds up to **8 entries**.\n\n**Tier 2: Leaders** — When a follower misses, it asks the leader. Leaders have larger caches (our demo uses **20 entries**), and they are the single coordination point for writes within a region. All writes go through followers to leaders, and cache updates propagate back down the chain.\n\n**Storage (MySQL)** — The persistent store, only hit on a leader cache miss. In production, MySQL manages the actual data on disk.\n\nThe write path is **write-through**: Client → Follower → Leader → MySQL. The reply propagates back with fresh cache entries at each tier. This simplifies cache consistency — no separate invalidation protocol needed.\n\n**Why two tiers?** A single giant cache cluster would be a bottleneck. The follower tier lets TAO scale reads horizontally — add more follower clusters to handle more traffic. The leader tier provides consistency coordination and protects the database. During a planned or unplanned outage, leaders act as a safety net.\n\nIn production, TAO serves **billions of reads per second** across geographically distributed clusters. The follower hit rate is typically **>95%**, meaning fewer than 5% of requests ever reach the leader."
+    },
+    "sharding": {
+      "title": "Sharding and Data Distribution",
+      "content": "In this demo, all data lives in one browser — no sharding needed. In production, Facebook's social graph is partitioned into **hundreds of thousands of shards**.\n\nAll objects and associations in the same shard are stored in the **same MySQL database** and cached on the **same set of servers** in each caching cluster. This co-location is critical — when you load a user's profile, the user object and their recent associations can often be fetched from the same shard, reducing cross-shard communication.\n\n**Shard assignment** — Objects can optionally be assigned to specific shards at creation time. A comment on a post can be co-located with that post's shard, so range queries like \"all comments on this post\" stay within a single shard.\n\n**Shard migration** — Shards can be migrated or cloned between servers to equalize load. This is essential for handling **load spikes** — when a celebrity posts a photo that appears in tens of millions of News Feeds simultaneously, the shard containing that photo becomes extremely hot.\n\n**The viral content problem** — A handful of objects can receive request rates millions of times higher than average. TAO smooths these spikes through shard migration, the multi-tier cache (followers absorb most reads), and replication across geographic regions.\n\n**Numbers at scale**:\n- Hundreds of thousands of shards across multiple regions\n- Each shard: ~1-10 GB of data in MySQL\n- Hot shards can be replicated to multiple server sets\n- Shard-to-server mapping is dynamically adjustable"
+    },
+    "consistency": {
+      "title": "Consistency Model: Eventual vs Strong",
+      "content": "In this demo, everything is instantly consistent — your browser is both the cache and the database. In production with data centers across the globe, consistency becomes a fundamental challenge.\n\nTAO chose **eventual consistency** as its default, driven by the **CAP theorem**: in a distributed system experiencing network partitions, you must choose between consistency and availability. For most social features, losing availability (the site goes down) is worse than briefly showing stale data.\n\n**Single primary region** — Each shard has one primary region that handles all writes. MySQL replication propagates updates to secondary regions asynchronously. A secondary region **cannot write** to its local MySQL — it forwards all writes to the primary region.\n\n**Read-after-write consistency** — TAO's write-through cache design ensures that a user who writes data in a secondary region will see their own write immediately. The write goes: Secondary Follower → Secondary Leader → Primary Leader → Primary MySQL → (async replication) → Secondary MySQL. But the cache along the write path is updated synchronously, so the user sees their change.\n\n**Handling failures** — When a MySQL instance goes down, the primary region can be automatically switched to another region. This is a routine procedure, not an emergency.\n\n**Strong consistency option** — For the few use cases that require it (financial transactions, privacy controls), TAO clients can override the default and force reads from the primary region. This costs higher latency and risks reduced availability, so it's used sparingly.\n\n**The pragmatic trade-off**: A user might briefly see a like count of 4,231 instead of 4,232. For social interactions, this is acceptable. For the privacy setting that controls who can see your profile? That uses strong consistency."
+    },
+    "socialGraphSystemDesign": {
+      "title": "System Design Overview",
+      "content": "A production social graph data store like TAO looks like this:\n\n**Read Path**: Client → Follower Cache → (miss) Leader Cache → (miss) MySQL → Response bubbles back, filling both caches\n\n**Write Path**: Client → Follower → Leader → MySQL → Inverse association auto-created → Cache updated on reply path\n\n**Multi-region**: Primary Region handles writes → MySQL replication → Secondary Regions get async updates\n\n**Key components at Facebook scale**:\n- **TAO Servers**: Thousands of servers organized as follower and leader clusters\n- **MySQL Clusters**: Hundreds of thousands of shards across multiple regions\n- **Follower Clusters**: Many per region, horizontally scalable for read throughput\n- **Leader Clusters**: One logical leader per region, coordinates writes and cache consistency\n- **Replication**: MySQL-level replication between primary and secondary regions\n- **Shard Manager**: Dynamic shard-to-server mapping, handles migration and load balancing\n\n**Scale numbers (from the 2013 paper)**:\n- **Billions** of read requests per second\n- **Millions** of write requests per second\n- Thousands of data types across all Facebook features\n- Sub-millisecond cache hit latency, single-digit millisecond for storage reads\n- **>99.8%** overall cache hit rate across both tiers\n\nThe genius of TAO is that product engineers never see any of this. They call `assoc_get`, `assoc_range`, or `assoc_count` — and TAO handles caching, replication, sharding, consistency, and inverse maintenance transparently."
+    },
+    "socialGraphReferences": {
+      "title": "References & Further Reading",
+      "content": "**1. [TAO: The power of the graph — Meta Engineering](https://engineering.fb.com/2013/06/25/core-infra/tao-the-power-of-the-graph/)** — The original blog post introducing TAO's design, motivation, and architecture. Written by the engineering team that built it.\n\n**2. [TAO: Facebook's Distributed Data Store for the Social Graph (USENIX ATC '13)](https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf)** — The full academic paper with detailed implementation, performance benchmarks, consistency analysis, and failure handling. Essential reading for understanding the system at depth.\n\n**3. [Memcached](https://memcached.org/)** — The distributed memory caching system that Facebook used before TAO. Understanding memcached's limitations helps explain why TAO was necessary.\n\n**4. [MySQL InnoDB Storage Engine](https://dev.mysql.com/doc/refman/en/innodb-storage-engine.html)** — The persistent storage engine that TAO continues to use underneath. TAO's innovation is in the caching and API layer above MySQL, not in replacing it.\n\n**5. [CAP Theorem (Wikipedia)](https://en.wikipedia.org/wiki/CAP_theorem)** — The theoretical foundation for TAO's choice of eventual consistency as the default model. Explains the fundamental trade-off between consistency and availability in distributed systems.\n\n**6. [TAOBench: An End-to-End Social Network Benchmark](https://engineering.fb.com/2022/09/07/data-infrastructure/taobench/)** — Open-source benchmark tool released by Meta in 2022 to evaluate data stores against TAO-like workloads."
     }
   }
 }

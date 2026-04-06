@@ -197,6 +197,14 @@
           </div>
           <div class="card-arrow">→</div>
         </a>
+        <a href="/social-graph" class="example-card">
+          <div class="card-icon">🕸️</div>
+          <div class="card-content">
+            <h3>{t('home.socialGraph')}</h3>
+            <p>{t('home.socialGraphDescription')}</p>
+          </div>
+          <div class="card-arrow">→</div>
+        </a>
       </div>
     </section>
   </div>

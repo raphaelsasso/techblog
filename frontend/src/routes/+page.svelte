@@ -205,6 +205,14 @@
           </div>
           <div class="card-arrow">→</div>
         </a>
+        <a href="/aws-lambda" class="example-card">
+          <div class="card-icon">λ</div>
+          <div class="card-content">
+            <h3>{t('home.awsLambda')}</h3>
+            <p>{t('home.awsLambdaDescription')}</p>
+          </div>
+          <div class="card-arrow">→</div>
+        </a>
       </div>
     </section>
   </div>

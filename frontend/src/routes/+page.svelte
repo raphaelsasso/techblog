@@ -213,6 +213,14 @@
           </div>
           <div class="card-arrow">→</div>
         </a>
+        <a href="/aws-lambda-scaling" class="example-card">
+          <div class="card-icon">📈</div>
+          <div class="card-content">
+            <h3>{t('home.lambdaScaling')}</h3>
+            <p>{t('home.lambdaScalingDescription')}</p>
+          </div>
+          <div class="card-arrow">→</div>
+        </a>
       </div>
     </section>
   </div>
